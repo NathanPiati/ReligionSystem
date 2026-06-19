@@ -1,0 +1,88 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Financeiro</h1>
+        <p class="text-muted mb-0">Resumo das movimentações do centro.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{% url 'criar_financeiro' %}" class="btn btn-primary">Nova Movimentação</a>
+        <a href="{% url 'financeiro_pdf' %}" target="_blank" class="btn btn-outline-secondary">Gerar PDF</a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card border-success h-100">
+            <div class="card-body">
+                <h5 class="card-title">Total de Entradas</h5>
+                <p class="card-text display-6 text-success">R$ {{ total_entradas|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card border-danger h-100">
+            <div class="card-body">
+                <h5 class="card-title">Total de Saídas</h5>
+                <p class="card-text display-6 text-danger">R$ {{ total_saidas|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card border-primary h-100">
+            <div class="card-body">
+                <h5 class="card-title">Saldo Final</h5>
+                <p class="card-text display-6 text-primary">R$ {{ saldo_final|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transacao in transacoes %}
+                <tr>
+                    <td>{{ transacao.data|date:"d/m/Y" }}</td>
+                    <td>{{ transacao.descricao }}</td>
+                    <td>
+                        {% if transacao.tipo == 'ENTRADA' %}
+                        <span class="badge bg-success">Entrada</span>
+                        {% else %}
+                        <span class="badge bg-danger">Saída</span>
+                        {% endif %}
+                    </td>
+                    <td class="{% if transacao.tipo == 'ENTRADA' %}text-success{% else %}text-danger{% endif %}">
+                        R$ {{ transacao.valor }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-light">
+                    <th colspan="3" class="text-end">Total Entradas</th>
+                    <th class="text-success">R$ {{ total_entradas|floatformat:2 }}</th>
+                </tr>
+                <tr class="table-light">
+                    <th colspan="3" class="text-end">Total Saídas</th>
+                    <th class="text-danger">R$ {{ total_saidas|floatformat:2 }}</th>
+                </tr>
+                <tr class="table-light">
+                    <th colspan="3" class="text-end">Saldo Final</th>
+                    <th class="text-primary">R$ {{ saldo_final|floatformat:2 }}</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}

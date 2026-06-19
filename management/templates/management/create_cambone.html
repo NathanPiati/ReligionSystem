@@ -1,0 +1,90 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    {% if edit %}
+                        <h4 class="mb-0"><i class="bi bi-pencil me-2"></i>Editar Cambone</h4>
+                    {% else %}
+                        <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Novo Cambone</h4>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.medium.id_for_label }}" class="form-label">
+                                Membro <span class="text-danger">*</span>
+                            </label>
+                            {{ form.medium }}
+                            {% if form.medium.errors %}
+                                <div class="invalid-feedback" style="display: block;">
+                                    {{ form.medium.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.cargo.id_for_label }}" class="form-label">
+                                Cargo
+                            </label>
+                            {{ form.cargo }}
+                            <small class="form-text text-muted">Ex: Cambone de Esquerda, Cambone de Direita</small>
+                            {% if form.cargo.errors %}
+                                <div class="invalid-feedback" style="display: block;">
+                                    {{ form.cargo.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.observacoes.id_for_label }}" class="form-label">
+                                Observações
+                            </label>
+                            {{ form.observacoes }}
+                            {% if form.observacoes.errors %}
+                                <div class="invalid-feedback" style="display: block;">
+                                    {{ form.observacoes.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.ativo }}
+                            <label class="form-check-label" for="{{ form.ativo.id_for_label }}">
+                                Cambone Ativo
+                            </label>
+                            {% if form.ativo.errors %}
+                                <div class="invalid-feedback" style="display: block;">
+                                    {{ form.ativo.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'lista_cambones' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-lg me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-2"></i>{% if edit %}Atualizar{% else %}Criar{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    select, textarea, input {
+        width: 100%;
+    }
+    .form-check-label {
+        margin-left: 0.5rem;
+    }
+</style>
+{% endblock %}

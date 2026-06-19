@@ -1,0 +1,76 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Banhos</h1>
+        <p class="text-muted mb-0">Registro dos banhos realizados.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'criar_banho' %}" class="btn btn-primary">Novo Banho</a>
+        <a href="{% url 'banhos_pdf' %}" target="_blank" class="btn btn-outline-secondary">Gerar PDF</a>
+    </div>
+</div>
+
+    <div class="card">
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <label class="form-label">Tipo</label>
+                <select name="tipo" class="form-select">
+                    <option value="">Todos</option>
+                    {% for key, label in tipo_choices %}
+                        <option value="{{ key }}" {% if current_tipo == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Entidade</label>
+                <input type="text" name="entidade" value="{{ current_entidade|default:'' }}" class="form-control" placeholder="Nome da entidade">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary me-2" type="submit">Filtrar</button>
+                <a href="{% url 'lista_banhos' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </form>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Entidade</th>
+                    <th>Horário</th>
+                    <th>Banho</th>
+                    <th>Tipo</th>
+                    <th>Responsável</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for banho in banhos %}
+                <tr>
+                    <td>{{ banho.data|date:'d/m/Y' }}</td>
+                    <td>{{ banho.entidade|default:'-' }}</td>
+                    <td>{{ banho.horario|time:'H:i'|default:'-' }}</td>
+                    <td>{{ banho.titulo }}</td>
+                    <td>{{ banho.get_tipo_display }}</td>
+                    <td>
+                        {% if banho.medium %}
+                            {{ banho.medium.nome_completo }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'editar_banho' banho.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">Nenhum banho registrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

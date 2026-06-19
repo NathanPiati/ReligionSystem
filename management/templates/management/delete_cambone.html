@@ -1,0 +1,35 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão</h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">
+                        Tem certeza que deseja remover <strong>{{ cambone.medium.nome_completo }}</strong> da lista de cambones?
+                    </p>
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Esta ação não pode ser desfeita.
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <form method="post" class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        {% csrf_token %}
+                        <a href="{% url 'lista_cambones' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-2"></i>Confirmar Exclusão
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

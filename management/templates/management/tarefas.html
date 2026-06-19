@@ -1,0 +1,78 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Tarefas{% if membro %} de {{ membro.nome_completo }}{% endif %}</h1>
+    </div>
+    <div class="btn-toolbar">
+        {% if membro %}
+            <a href="{% url 'criar_tarefa_member' membro.id %}" class="btn btn-primary me-2">Adicionar Tarefa</a>
+            <a href="{% url 'tarefas_pdf' %}?membro={{ membro.id }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-secondary">Imprimir</a>
+        {% else %}
+            <a href="{% url 'criar_tarefa' %}" class="btn btn-primary me-2">Nova Tarefa</a>
+            <a href="{% url 'tarefas_pdf' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-secondary">Imprimir</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filtros -->
+<form class="row g-2 mb-3" method="get">
+    <div class="col-md-4">
+        <input type="text" name="q" value="{{ q|default_if_none:'' }}" class="form-control" placeholder="Pesquisar título, descrição ou colaborador">
+    </div>
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">Todos os status</option>
+            {% for value,label in status_choices %}
+            <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="papel" class="form-select">
+            <option value="">Todas as funções</option>
+            {% for value,label in papel_choices %}
+            <option value="{{ value }}" {% if current_papel == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2 d-flex">
+        <button class="btn btn-primary me-2" type="submit">Filtrar</button>
+        <a href="{% url 'lista_tarefas' %}" class="btn btn-secondary">Limpar</a>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Colaborador</th>
+                    <th>Título</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tarefa in tarefas %}
+                <tr>
+                    <td>{{ tarefa.medium.nome_completo }}</td>
+                    <td>{{ tarefa.titulo }}</td>
+                    <td>{{ tarefa.data_vencimento|date:'d/m/Y'|default:'-' }}</td>
+                    <td>{{ tarefa.get_status_display }}</td>
+                    <td>
+                        <a href="{% url 'editar_tarefa' tarefa.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">Nenhuma tarefa cadastrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "management/base.html" %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center" style="min-height:80vh;">
+  <div class="card p-4 shadow-sm" style="width:100%; max-width:420px;">
+    <div class="text-center mb-3">
+      <i class="bi bi-shield-lock-fill fs-1 text-primary"></i>
+      <h3 class="mt-2">Entrar</h3>
+      <p class="text-muted mb-0">Acesse o painel da Tenda de Aruanda</p>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="mb-3">
+        <label for="id_username" class="form-label">Usuário</label>
+        <input type="text" name="username" id="id_username" class="form-control" value="{{ form.username.value|default_if_none:'' }}">
+        {% if form.username.errors %}
+          <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_password" class="form-label">Senha</label>
+        <input type="password" name="password" id="id_password" class="form-control">
+        {% if form.password.errors %}
+          <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="remember" id="id_remember">
+          <label class="form-check-label" for="id_remember">Lembrar-me</label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">Entrar</button>
+    </form>
+
+    
+  </div>
+</div>
+{% endblock %}

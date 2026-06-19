@@ -1,0 +1,33 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.dashboard, name='dashboard'),
+    path('membros/', views.lista_membros, name='lista_membros'),
+    path('eventos/', views.lista_eventos, name='lista_eventos'),
+    path('financeiro/', views.financeiro, name='financeiro'),
+    path('financeiro/pdf/', views.financeiro_pdf, name='financeiro_pdf'),
+    path('banhos/pdf/', views.banhos_pdf, name='banhos_pdf'),
+    path('estoque/pdf/', views.estoque_pdf, name='estoque_pdf'),
+    path('estoque/', views.lista_estoque, name='estoque'),
+    path('criar/material/', views.criar_material, name='criar_material'),
+    path('editar/material/<int:pk>/',
+         views.editar_material, name='editar_material'),
+    path('criar/evento/', views.criar_evento, name='criar_evento'),
+    path('banhos/', views.lista_banhos, name='lista_banhos'),
+    path('banhos/criar/', views.criar_banho, name='criar_banho'),
+    path('banhos/editar/<int:pk>/', views.editar_banho, name='editar_banho'),
+    path('criar/medium/', views.criar_medium, name='criar_medium'),
+    path('editar/medium/<int:pk>/', views.editar_medium, name='editar_medium'),
+    path('criar/financeiro/', views.criar_financeiro, name='criar_financeiro'),
+    path('criar/movimentacao/', views.criar_movimentacao,
+         name='criar_movimentacao'),
+    path('tarefas/', views.lista_tarefas, name='lista_tarefas'),
+    path('tarefas/pdf/', views.tarefas_pdf, name='tarefas_pdf'),
+    path('tarefas/criar/', views.criar_tarefa, name='criar_tarefa'),
+    path('tarefas/criar/<int:pk>/', views.criar_tarefa,
+         name='criar_tarefa_member'),
+    path('tarefas/editar/<int:pk>/', views.editar_tarefa, name='editar_tarefa'),
+    path('membros/<int:pk>/tarefas/', views.lista_tarefas_member,
+         name='lista_tarefas_member'),
+]

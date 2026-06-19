@@ -1,0 +1,46 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Colaboradores</h1>
+    <a href="{% url 'criar_medium' %}" class="btn btn-primary">Novo Colaborador</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Função</th>
+                    <th>Cargo</th>
+                    <th>Telefone</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for membro in membros %}
+                <tr>
+                    <td>{{ membro.nome_completo }}</td>
+                    <td>{{ membro.get_papel_display }}</td>
+                    <td>{{ membro.cargo|default:"-" }}</td>
+                    <td>{{ membro.telefone }}</td>
+                    <td>
+                        {% if membro.ativo %}
+                        <span class="badge bg-success">Ativo</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'editar_medium' membro.id %}" class="btn btn-sm btn-outline-primary me-1">Editar</a>
+                        <a href="{% url 'lista_tarefas_member' membro.id %}" class="btn btn-sm btn-outline-secondary">Tarefas</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
