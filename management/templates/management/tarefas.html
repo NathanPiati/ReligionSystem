@@ -7,11 +7,19 @@
     </div>
     <div class="btn-toolbar">
         {% if membro %}
+            {% if perms.management.add_tarefa %}
             <a href="{% url 'criar_tarefa_member' membro.id %}" class="btn btn-primary me-2">Adicionar Tarefa</a>
+            {% endif %}
+            {% if perms.management.view_tarefa %}
             <a href="{% url 'tarefas_pdf' %}?membro={{ membro.id }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-secondary">Imprimir</a>
+            {% endif %}
         {% else %}
+            {% if perms.management.add_tarefa %}
             <a href="{% url 'criar_tarefa' %}" class="btn btn-primary me-2">Nova Tarefa</a>
+            {% endif %}
+            {% if perms.management.view_tarefa %}
             <a href="{% url 'tarefas_pdf' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-secondary">Imprimir</a>
+            {% endif %}
         {% endif %}
     </div>
 </div>
@@ -63,7 +71,9 @@
                     <td>{{ tarefa.data_vencimento|date:'d/m/Y'|default:'-' }}</td>
                     <td>{{ tarefa.get_status_display }}</td>
                     <td>
+                        {% if perms.management.change_tarefa %}
                         <a href="{% url 'editar_tarefa' tarefa.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

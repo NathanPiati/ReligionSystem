@@ -1,20 +1,97 @@
 {% extends 'management/base.html' %}
 
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Eventos</h1>
+<style>
+    :root {
+        --event-accent: #0d6efd;
+        --event-accent-soft: #e9f2ff;
+        --event-title: #1e2a3b;
+    }
+
+    .event-hero {
+        background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+        border: 1px solid #dfeaff;
+        border-radius: 16px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .event-table-wrap {
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 14px 28px rgba(30, 42, 59, 0.08);
+    }
+
+    .table.event-table thead th {
+        background: #f2f7ff;
+        color: var(--event-title);
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .table.event-table tbody tr {
+        transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .table.event-table tbody tr:hover {
+        background-color: #fbfdff;
+        transform: translateY(-1px);
+    }
+
+    .event-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .event-chip.done {
+        background: #e8f8ef;
+        color: #1d6f42;
+    }
+
+    .event-chip.pending {
+        background: #fff5db;
+        color: #8c6400;
+    }
+
+    .event-notes {
+        max-width: 260px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+<div class="event-hero d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center">
+    <div>
+        <h1 class="h3 mb-1">Eventos e Giras</h1>
+        <p class="text-muted mb-0">Acompanhe, atualize e finalize os eventos com recados das entidades.</p>
+    </div>
+    {% if perms.management.add_evento %}
     <a href="{% url 'criar_evento' %}" class="btn btn-primary">Novo Evento</a>
+    {% endif %}
 </div>
 
-<div class="card">
+<div class="card event-table-wrap">
     <div class="card-body">
-        <table class="table">
+        <div class="table-responsive">
+            <table class="table event-table align-middle mb-0">
             <thead>
                 <tr>
                     <th>Título</th>
                     <th>Tipo</th>
                     <th>Data</th>
-                    <th>Horário</th>
+                    <th>Horário Previsto</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Concluída</th>
+                    <th>Descrição</th>
+                    <th>Recados das Entidades</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -23,11 +100,32 @@
                     <td>{{ evento.titulo }}</td>
                     <td>{{ evento.get_tipo_display }}</td>
                     <td>{{ evento.data|date:"d/m/Y" }}</td>
-                    <td>{{ evento.horario }}</td>
+                    <td>{{ evento.horario|time:"H:i" }}</td>
+                    <td>{% if evento.hora_inicio %}{{ evento.hora_inicio|time:"H:i" }}{% else %}-{% endif %}</td>
+                    <td>{% if evento.hora_fim %}{{ evento.hora_fim|time:"H:i" }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if evento.gira_concluida %}
+                            <span class="event-chip done">Concluída</span>
+                        {% else %}
+                            <span class="event-chip pending">Pendente</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="event-notes" title="{{ evento.descricao|default:'-' }}">{{ evento.descricao|default:"-" }}</span></td>
+                    <td><span class="event-notes" title="{{ evento.recados_entidades|default:'-' }}">{{ evento.recados_entidades|default:"-" }}</span></td>
+                    <td>
+                        {% if perms.management.change_evento %}
+                        <a href="{% url 'editar_evento' evento.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="text-center text-muted py-4">Nenhum evento cadastrado ainda.</td>
                 </tr>
                 {% endfor %}
             </tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -13,8 +13,9 @@ class MediumAdmin(admin.ModelAdmin):
 
 @admin.register(Evento)
 class EventoAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'tipo', 'data', 'horario')
-    list_filter = ('tipo', 'data')
+    list_display = ('titulo', 'tipo', 'data', 'horario',
+                    'gira_concluida', 'hora_inicio', 'hora_fim')
+    list_filter = ('tipo', 'data', 'gira_concluida')
 
 
 @admin.register(Financeiro)

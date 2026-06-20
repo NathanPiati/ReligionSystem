@@ -1,5 +1,10 @@
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
 from .models import Medium, Evento, Financeiro, Material, MovimentacaoEstoque, Tarefa, Banho
+
+
+User = get_user_model()
 
 
 class MediumForm(forms.ModelForm):
@@ -12,7 +17,47 @@ class MediumForm(forms.ModelForm):
 class EventoForm(forms.ModelForm):
     class Meta:
         model = Evento
-        fields = ['titulo', 'tipo', 'data', 'horario', 'descricao']
+        fields = [
+            'titulo',
+            'tipo',
+            'data',
+            'horario',
+            'hora_inicio',
+            'hora_fim',
+            'descricao',
+            'recados_entidades',
+            'gira_concluida',
+        ]
+        labels = {
+            'titulo': 'Título',
+            'tipo': 'Tipo',
+            'data': 'Data',
+            'horario': 'Horário previsto',
+            'hora_inicio': 'Hora de início da gira',
+            'hora_fim': 'Hora de término da gira',
+            'descricao': 'Descrição do evento',
+            'recados_entidades': 'Recados das entidades',
+            'gira_concluida': 'Gira concluída',
+        }
+        widgets = {
+            'data': forms.DateInput(attrs={'type': 'date'}),
+            'horario': forms.TimeInput(attrs={'type': 'time'}),
+            'hora_inicio': forms.TimeInput(attrs={'type': 'time'}),
+            'hora_fim': forms.TimeInput(attrs={'type': 'time'}),
+            'descricao': forms.Textarea(attrs={'rows': 3}),
+            'recados_entidades': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        hora_inicio = cleaned_data.get('hora_inicio')
+        hora_fim = cleaned_data.get('hora_fim')
+
+        if hora_inicio and hora_fim and hora_fim < hora_inicio:
+            self.add_error(
+                'hora_fim', 'A hora de término não pode ser menor que a hora de início.')
+
+        return cleaned_data
 
 
 class FinanceiroForm(forms.ModelForm):
@@ -68,3 +113,51 @@ class BanhoForm(forms.ModelForm):
             'data': forms.DateInput(attrs={'type': 'date'}),
             'horario': forms.TimeInput(attrs={'type': 'time'}),
         }
+
+
+class GroupPermissionForm(forms.ModelForm):
+    permissions = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.select_related('content_type').order_by(
+            'content_type__app_label', 'content_type__model', 'name'),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={'class': 'form-select', 'size': 14}),
+        label='Permissões',
+    )
+
+    class Meta:
+        model = Group
+        fields = ['name', 'permissions']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex.: Coordenação'}),
+        }
+
+
+class UserGroupAssignmentForm(forms.Form):
+    grupos = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.order_by('name'),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={'class': 'form-select', 'size': 10}),
+        label='Grupos',
+    )
+
+
+class UserSelectorForm(forms.Form):
+    usuario = forms.ModelChoiceField(
+        queryset=User.objects.order_by('username'),
+        required=False,
+        empty_label='Selecione um usuário',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Usuário',
+    )
+
+
+class GroupSelectorForm(forms.Form):
+    grupo = forms.ModelChoiceField(
+        queryset=Group.objects.order_by('name'),
+        required=False,
+        empty_label='Novo grupo',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Grupo',
+    )

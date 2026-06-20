@@ -1,0 +1,336 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --admin-ink: #182433;
+        --admin-muted: #5d6f86;
+        --admin-border: #dce6f6;
+        --admin-soft: #f4f8ff;
+        --admin-card: linear-gradient(150deg, #ffffff 0%, #f7fbff 100%);
+    }
+
+    .admin-hero {
+        background: linear-gradient(135deg, #12263f 0%, #1f3a5f 100%);
+        color: white;
+        border-radius: 18px;
+        padding: 1.25rem 1.4rem;
+        box-shadow: 0 18px 36px rgba(18, 38, 63, 0.18);
+        margin-bottom: 1rem;
+    }
+
+    .admin-hero small {
+        color: rgba(255, 255, 255, 0.78);
+    }
+
+    .admin-stat {
+        border: 1px solid var(--admin-border);
+        border-radius: 16px;
+        background: var(--admin-card);
+        box-shadow: 0 14px 28px rgba(24, 36, 51, 0.07);
+        height: 100%;
+    }
+
+    .admin-card {
+        border: 1px solid var(--admin-border);
+        border-radius: 16px;
+        background: var(--admin-card);
+        box-shadow: 0 14px 28px rgba(24, 36, 51, 0.07);
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .admin-card-header {
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid var(--admin-border);
+        background: rgba(13, 110, 253, 0.05);
+    }
+
+    .admin-card-header h3,
+    .admin-card-header h4 {
+        margin: 0;
+        color: var(--admin-ink);
+    }
+
+    .admin-card-body {
+        padding: 1.1rem;
+    }
+
+    .admin-card-body input,
+    .admin-card-body select,
+    .admin-card-body textarea {
+        width: 100%;
+        border: 1px solid #d2ddf0;
+        border-radius: 10px;
+        padding: 0.55rem 0.7rem;
+    }
+
+    .admin-card-body input:focus,
+    .admin-card-body select:focus,
+    .admin-card-body textarea:focus {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.13);
+        outline: none;
+    }
+
+    .admin-tip {
+        border-radius: 12px;
+        background: var(--admin-soft);
+        border: 1px dashed #bfd3f9;
+        color: var(--admin-muted);
+        padding: 0.75rem 0.9rem;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        background: #e9f2ff;
+        color: #2355a6;
+    }
+
+    .group-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: #35527d;
+        margin: 0 0.35rem 0.35rem 0;
+    }
+
+    .table thead th {
+        background: #f3f7ff;
+        color: var(--admin-ink);
+        border-bottom: 1px solid var(--admin-border);
+    }
+
+    .errorlist {
+        margin: 0.35rem 0 0;
+        padding-left: 1rem;
+        color: #b02a37;
+        font-size: 0.88rem;
+    }
+</style>
+
+<div class="admin-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <div class="pill mb-2"><i class="bi bi-shield-lock me-1"></i>Painel exclusivo</div>
+        <h1 class="h3 mb-1">Painel Administrativo</h1>
+        <small>Gerencie grupos, permissões e vínculos de usuários com acesso restrito ao superusuário.</small>
+    </div>
+    <div class="text-end">
+        <div class="small text-white-50">Acesso atual</div>
+        <div class="fw-semibold">{{ request.user.get_username }}</div>
+    </div>
+</div>
+
+{% if messages %}
+<div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} mb-2">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="admin-stat p-3">
+            <div class="text-muted small">Usuários cadastrados</div>
+            <div class="display-6 mb-0">{{ total_users }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-stat p-3">
+            <div class="text-muted small">Grupos configurados</div>
+            <div class="display-6 mb-0">{{ total_groups }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-stat p-3">
+            <div class="text-muted small">Permissões disponíveis</div>
+            <div class="display-6 mb-0">{{ total_permissions }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="admin-card mb-3">
+            <div class="admin-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="h5 mb-1">Grupos e permissões</h3>
+                    <div class="text-muted small">Crie um novo grupo ou edite o grupo selecionado.</div>
+                </div>
+                <a href="{% url 'painel_administrativo' %}" class="btn btn-sm btn-outline-secondary">Novo grupo</a>
+            </div>
+            <div class="admin-card-body">
+                <form method="get" class="mb-3">
+                    <label class="form-label" for="id_grupo_selector">Selecionar grupo</label>
+                    {{ group_selector_form.grupo }}
+                    <div class="mt-2 d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" type="submit">Carregar</button>
+                    </div>
+                </form>
+
+                <div class="admin-tip mb-3">
+                    {% if selected_group %}
+                    Editando o grupo <strong>{{ selected_group.name }}</strong>.
+                    {% else %}
+                    Nenhum grupo selecionado. Preencha o nome abaixo para criar um novo grupo.
+                    {% endif %}
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_group">
+                    <input type="hidden" name="grupo_id" value="{% if selected_group %}{{ selected_group.id }}{% endif %}">
+
+                    <div class="mb-3">
+                        <label for="{{ group_form.name.id_for_label }}" class="form-label">{{ group_form.name.label }}</label>
+                        {{ group_form.name }}
+                        {{ group_form.name.errors }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ group_form.permissions.id_for_label }}" class="form-label">{{ group_form.permissions.label }}</label>
+                        {{ group_form.permissions }}
+                        {{ group_form.permissions.errors }}
+                        <div class="form-text">Selecione uma ou mais permissões para esse grupo.</div>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit">{% if selected_group %}Salvar grupo{% else %}Criar grupo{% endif %}</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h4 class="h6 mb-1">Grupos existentes</h4>
+                <div class="text-muted small">Visão rápida da estrutura de acesso.</div>
+            </div>
+            <div class="admin-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Grupo</th>
+                                <th>Permissões</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for group in groups %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'painel_administrativo' %}?grupo={{ group.id }}{% if selected_user %}&usuario={{ selected_user.id }}{% endif %}">{{ group.name }}</a>
+                                </td>
+                                <td>{{ group.permissions.count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">Nenhum grupo cadastrado.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="admin-card mb-3">
+            <div class="admin-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h3 class="h5 mb-1">Usuários e grupos</h3>
+                    <div class="text-muted small">Atribua grupos ao usuário selecionado.</div>
+                </div>
+            </div>
+            <div class="admin-card-body">
+                <form method="get" class="mb-3">
+                    <label class="form-label" for="id_usuario_selector">Selecionar usuário</label>
+                    {{ user_selector_form.usuario }}
+                    <div class="mt-2 d-flex gap-2">
+                        <button class="btn btn-outline-primary btn-sm" type="submit">Carregar</button>
+                    </div>
+                </form>
+
+                <div class="admin-tip mb-3">
+                    {% if selected_user %}
+                    Usuário atual: <strong>{{ selected_user.username }}</strong>
+                    {% else %}
+                    Selecione um usuário para definir seus grupos.
+                    {% endif %}
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="save_user">
+                    <input type="hidden" name="usuario_id" value="{% if selected_user %}{{ selected_user.id }}{% endif %}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Grupos atuais</label>
+                        <div>
+                            {% if selected_user and selected_user.groups.all %}
+                                {% for group in selected_user.groups.all %}
+                                <span class="group-badge"><i class="bi bi-people"></i>{{ group.name }}</span>
+                                {% empty %}
+                                <span class="text-muted">Nenhum grupo atribuído.</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">Nenhum grupo atribuído.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ user_form.grupos.id_for_label }}" class="form-label">{{ user_form.grupos.label }}</label>
+                        {{ user_form.grupos }}
+                        {{ user_form.grupos.errors }}
+                        <div class="form-text">Marque os grupos que o usuário deve ter.</div>
+                    </div>
+
+                    <button class="btn btn-primary" type="submit" {% if not selected_user %}disabled{% endif %}>Salvar grupos do usuário</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h4 class="h6 mb-1">Usuários existentes</h4>
+                <div class="text-muted small">Clique no nome para carregar na edição.</div>
+            </div>
+            <div class="admin-card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Grupos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_item in users %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'painel_administrativo' %}?usuario={{ user_item.id }}{% if selected_group %}&grupo={{ selected_group.id }}{% endif %}">{{ user_item.username }}</a>
+                                </td>
+                                <td>{{ user_item.groups.count }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">Nenhum usuário encontrado.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

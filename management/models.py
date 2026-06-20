@@ -49,6 +49,10 @@ class Evento(models.Model):
     data = models.DateField()
     horario = models.TimeField()
     descricao = models.TextField(blank=True)
+    recados_entidades = models.TextField(blank=True)
+    gira_concluida = models.BooleanField(default=False)
+    hora_inicio = models.TimeField(null=True, blank=True)
+    hora_fim = models.TimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.titulo} - {self.data}"

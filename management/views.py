@@ -1,9 +1,25 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.core.exceptions import PermissionDenied
 from .models import Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho
 from django.db.models import Sum, Q
-from django.contrib.auth.decorators import login_required
-from .forms import MediumForm, EventoForm, FinanceiroForm, MaterialForm, MovimentacaoEstoqueForm, TarefaForm, BanhoForm
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
+from django.contrib import messages
+from .forms import (
+    MediumForm,
+    EventoForm,
+    FinanceiroForm,
+    MaterialForm,
+    MovimentacaoEstoqueForm,
+    TarefaForm,
+    BanhoForm,
+    GroupPermissionForm,
+    UserGroupAssignmentForm,
+    UserSelectorForm,
+    GroupSelectorForm,
+)
 from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
@@ -11,37 +27,123 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 
+User = get_user_model()
+
+
+@login_required
+def painel_administrativo(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    users = User.objects.prefetch_related('groups').order_by('username')
+    groups = Group.objects.prefetch_related('permissions').order_by('name')
+    permissions = Permission.objects.select_related('content_type').order_by(
+        'content_type__app_label', 'content_type__model', 'name'
+    )
+
+    selected_group_id = request.POST.get(
+        'grupo_id') or request.GET.get('grupo')
+    selected_user_id = request.POST.get(
+        'usuario_id') or request.GET.get('usuario')
+
+    selected_group = groups.filter(pk=selected_group_id).first(
+    ) if selected_group_id else groups.first()
+    selected_user = users.filter(pk=selected_user_id).first(
+    ) if selected_user_id else users.first()
+
+    group_form = GroupPermissionForm(
+        instance=selected_group) if selected_group else GroupPermissionForm()
+    user_form = UserGroupAssignmentForm(
+        initial={'grupos': selected_user.groups.all()} if selected_user else None
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'save_group':
+            group_form = GroupPermissionForm(
+                request.POST, instance=selected_group)
+            if group_form.is_valid():
+                group = group_form.save()
+                group_form.save_m2m()
+                messages.success(request, 'Grupo salvo com sucesso.')
+                return redirect('painel_administrativo')
+        elif action == 'save_user':
+            if not selected_user_id:
+                messages.error(
+                    request, 'Selecione um usuário antes de salvar os grupos.')
+                return redirect('painel_administrativo')
+            selected_user = get_object_or_404(User, pk=selected_user_id)
+            user_form = UserGroupAssignmentForm(request.POST)
+            if user_form.is_valid():
+                selected_user.groups.set(user_form.cleaned_data['grupos'])
+                messages.success(
+                    request, 'Grupos do usuário atualizados com sucesso.')
+                return redirect('painel_administrativo')
+
+    context = {
+        'users': users,
+        'groups': groups,
+        'permissions': permissions,
+        'selected_group': selected_group,
+        'selected_user': selected_user,
+        'group_form': group_form,
+        'user_form': user_form,
+        'group_selector_form': GroupSelectorForm(initial={'grupo': selected_group}),
+        'user_selector_form': UserSelectorForm(initial={'usuario': selected_user}),
+        'total_users': users.count(),
+        'total_groups': groups.count(),
+        'total_permissions': permissions.count(),
+    }
+    return render(request, 'management/painel_administrativo.html', context)
+
+
 @login_required
 def dashboard(request):
-    total_membros = Medium.objects.filter(ativo=True).count()
-    proximos_eventos = Evento.objects.all().order_by('data')[:5]
-    saldo = Financeiro.objects.filter(tipo='ENTRADA').aggregate(Sum('valor'))[
-        'valor__sum'] or 0
-    despesas = Financeiro.objects.filter(tipo='SAIDA').aggregate(Sum('valor'))[
-        'valor__sum'] or 0
-    saldo_final = saldo - despesas
+    total_membros = None
+    proximos_eventos = []
+    saldo_final = None
+    can_view_medium = request.user.has_perm('management.view_medium')
+    can_view_evento = request.user.has_perm('management.view_evento')
+    can_view_financeiro = request.user.has_perm('management.view_financeiro')
+
+    if can_view_medium:
+        total_membros = Medium.objects.filter(ativo=True).count()
+
+    if can_view_evento:
+        proximos_eventos = Evento.objects.all().order_by('data')[:5]
+
+    if can_view_financeiro:
+        saldo = Financeiro.objects.filter(tipo='ENTRADA').aggregate(Sum('valor'))[
+            'valor__sum'] or 0
+        despesas = Financeiro.objects.filter(tipo='SAIDA').aggregate(Sum('valor'))[
+            'valor__sum'] or 0
+        saldo_final = saldo - despesas
 
     context = {
         'total_membros': total_membros,
         'proximos_eventos': proximos_eventos,
         'saldo_final': saldo_final,
+        'can_view_medium': can_view_medium,
+        'can_view_evento': can_view_evento,
+        'can_view_financeiro': can_view_financeiro,
     }
     return render(request, 'management/dashboard.html', context)
 
 
-@login_required
+@permission_required('management.view_medium', raise_exception=True)
 def lista_membros(request):
     membros = Medium.objects.all()
     return render(request, 'management/membros.html', {'membros': membros})
 
 
-@login_required
+@permission_required('management.view_evento', raise_exception=True)
 def lista_eventos(request):
     eventos = Evento.objects.all().order_by('-data')
     return render(request, 'management/eventos.html', {'eventos': eventos})
 
 
-@login_required
+@permission_required('management.view_financeiro', raise_exception=True)
 def financeiro(request):
     transacoes = Financeiro.objects.all().order_by('-data')
     total_entradas = Financeiro.objects.filter(tipo='ENTRADA').aggregate(
@@ -59,7 +161,7 @@ def financeiro(request):
     return render(request, 'management/financeiro.html', context)
 
 
-@login_required
+@permission_required('management.view_financeiro', raise_exception=True)
 def financeiro_pdf(request):
     transacoes = Financeiro.objects.all().order_by('-data')
     total_entradas = Financeiro.objects.filter(tipo='ENTRADA').aggregate(
@@ -120,7 +222,7 @@ def financeiro_pdf(request):
     return response
 
 
-@login_required
+@permission_required('management.view_material', raise_exception=True)
 def lista_estoque(request):
     materiais = Material.objects.all()
     total_items = materiais.count()
@@ -134,7 +236,7 @@ def lista_estoque(request):
     return render(request, 'management/estoque.html', context)
 
 
-@login_required
+@permission_required('management.view_material', raise_exception=True)
 def estoque_pdf(request):
     materiais = Material.objects.all().order_by('nome')
     total_items = materiais.count()
@@ -188,7 +290,7 @@ def estoque_pdf(request):
     return response
 
 
-@login_required
+@permission_required('management.add_material', raise_exception=True)
 def criar_material(request):
     if request.method == 'POST':
         form = MaterialForm(request.POST)
@@ -200,7 +302,7 @@ def criar_material(request):
     return render(request, 'management/create_material.html', {'form': form})
 
 
-@login_required
+@permission_required('management.change_material', raise_exception=True)
 def editar_material(request, pk):
     material = get_object_or_404(Material, pk=pk)
     if request.method == 'POST':
@@ -213,7 +315,7 @@ def editar_material(request, pk):
     return render(request, 'management/create_material.html', {'form': form, 'edit': True, 'material': material})
 
 
-@login_required
+@permission_required('management.add_evento', raise_exception=True)
 def criar_evento(request):
     if request.method == 'POST':
         form = EventoForm(request.POST)
@@ -225,7 +327,20 @@ def criar_evento(request):
     return render(request, 'management/create_evento.html', {'form': form})
 
 
-@login_required
+@permission_required('management.change_evento', raise_exception=True)
+def editar_evento(request, pk):
+    evento = get_object_or_404(Evento, pk=pk)
+    if request.method == 'POST':
+        form = EventoForm(request.POST, instance=evento)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_eventos')
+    else:
+        form = EventoForm(instance=evento)
+    return render(request, 'management/create_evento.html', {'form': form, 'edit': True, 'evento': evento})
+
+
+@permission_required('management.view_banho', raise_exception=True)
 def lista_banhos(request):
     # filtros via querystring: tipo e entidade (nome da entidade)
     tipo = request.GET.get('tipo')
@@ -248,7 +363,7 @@ def lista_banhos(request):
     return render(request, 'management/banhos.html', context)
 
 
-@login_required
+@permission_required('management.add_banho', raise_exception=True)
 def criar_banho(request):
     if request.method == 'POST':
         form = BanhoForm(request.POST)
@@ -260,7 +375,7 @@ def criar_banho(request):
     return render(request, 'management/create_banho.html', {'form': form})
 
 
-@login_required
+@permission_required('management.change_banho', raise_exception=True)
 def editar_banho(request, pk):
     banho = get_object_or_404(Banho, pk=pk)
     if request.method == 'POST':
@@ -273,7 +388,7 @@ def editar_banho(request, pk):
     return render(request, 'management/create_banho.html', {'form': form, 'edit': True, 'banho': banho})
 
 
-@login_required
+@permission_required('management.view_banho', raise_exception=True)
 def banhos_pdf(request):
     banhos = Banho.objects.select_related(
         'medium').order_by('-data', '-horario')
@@ -320,7 +435,7 @@ def banhos_pdf(request):
     return response
 
 
-@login_required
+@permission_required('management.add_medium', raise_exception=True)
 def criar_medium(request):
     if request.method == 'POST':
         form = MediumForm(request.POST)
@@ -332,7 +447,7 @@ def criar_medium(request):
     return render(request, 'management/create_medium.html', {'form': form})
 
 
-@login_required
+@permission_required('management.change_medium', raise_exception=True)
 def editar_medium(request, pk):
     membro = get_object_or_404(Medium, pk=pk)
     if request.method == 'POST':
@@ -345,7 +460,7 @@ def editar_medium(request, pk):
     return render(request, 'management/create_medium.html', {'form': form, 'edit': True, 'membro': membro})
 
 
-@login_required
+@permission_required('management.add_financeiro', raise_exception=True)
 def criar_financeiro(request):
     if request.method == 'POST':
         form = FinanceiroForm(request.POST)
@@ -357,7 +472,7 @@ def criar_financeiro(request):
     return render(request, 'management/create_financeiro.html', {'form': form})
 
 
-@login_required
+@permission_required('management.add_movimentacaoestoque', raise_exception=True)
 def criar_movimentacao(request):
     if request.method == 'POST':
         form = MovimentacaoEstoqueForm(request.POST)
@@ -369,7 +484,7 @@ def criar_movimentacao(request):
     return render(request, 'management/create_movimentacao.html', {'form': form})
 
 
-@login_required
+@permission_required('management.view_tarefa', raise_exception=True)
 def lista_tarefas(request):
     # filtros via querystring: status, papel (função do colaborador) e pesquisa livre
     status = request.GET.get('status')
@@ -400,7 +515,7 @@ def lista_tarefas(request):
     return render(request, 'management/tarefas.html', context)
 
 
-@login_required
+@permission_required('management.view_tarefa', raise_exception=True)
 def lista_tarefas_member(request, pk):
     membro = get_object_or_404(Medium, pk=pk)
     status = request.GET.get('status')
@@ -432,7 +547,7 @@ def lista_tarefas_member(request, pk):
     return render(request, 'management/tarefas.html', context)
 
 
-@login_required
+@permission_required('management.add_tarefa', raise_exception=True)
 def criar_tarefa(request, pk=None):
     membro = get_object_or_404(Medium, pk=pk) if pk else None
 
@@ -450,7 +565,7 @@ def criar_tarefa(request, pk=None):
     return render(request, 'management/create_tarefa.html', {'form': form, 'edit': False, 'membro': membro})
 
 
-@login_required
+@permission_required('management.change_tarefa', raise_exception=True)
 def editar_tarefa(request, pk):
     tarefa = get_object_or_404(Tarefa, pk=pk)
     if request.method == 'POST':
@@ -464,7 +579,7 @@ def editar_tarefa(request, pk):
     return render(request, 'management/create_tarefa.html', {'form': form, 'edit': True, 'tarefa': tarefa})
 
 
-@login_required
+@permission_required('management.view_tarefa', raise_exception=True)
 def tarefas_pdf(request):
     membro_id = request.GET.get('membro')
     status = request.GET.get('status')

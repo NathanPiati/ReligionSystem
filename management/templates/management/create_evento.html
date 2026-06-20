@@ -1,13 +1,149 @@
 {% extends "management/base.html" %}
 
 {% block content %}
-<div class="container">
-  <h2 class="mt-3">Novo Evento</h2>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Criar</button>
-    <a href="{% url 'lista_eventos' %}" class="btn btn-secondary">Cancelar</a>
-  </form>
+<style>
+  :root {
+    --event-card-bg: linear-gradient(150deg, #ffffff 0%, #f6faff 100%);
+    --event-border: #e4ecfb;
+    --event-title: #1f2f46;
+  }
+
+  .event-form-shell {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  .event-form-card {
+    border: 1px solid var(--event-border);
+    border-radius: 16px;
+    background: var(--event-card-bg);
+    box-shadow: 0 18px 36px rgba(31, 47, 70, 0.08);
+    overflow: hidden;
+  }
+
+  .event-form-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--event-border);
+    background: rgba(13, 110, 253, 0.06);
+  }
+
+  .event-form-header h2 {
+    margin: 0;
+    color: var(--event-title);
+    font-size: 1.35rem;
+  }
+
+  .event-form-header p {
+    margin: 0.25rem 0 0;
+    color: #5d6f86;
+  }
+
+  .event-form-body {
+    padding: 1.2rem;
+  }
+
+  .event-form-body input,
+  .event-form-body select,
+  .event-form-body textarea {
+    border-radius: 10px;
+    border: 1px solid #d5def0;
+    padding: 0.55rem 0.65rem;
+    width: 100%;
+  }
+
+  .event-form-body input:focus,
+  .event-form-body select:focus,
+  .event-form-body textarea:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+    outline: none;
+  }
+
+  .event-check-wrap {
+    background: #f2f7ff;
+    border-radius: 10px;
+    border: 1px dashed #bfd3f9;
+    padding: 0.65rem;
+  }
+
+  .errorlist {
+    margin: 0.35rem 0 0;
+    padding-left: 1rem;
+    color: #b02a37;
+    font-size: 0.88rem;
+  }
+</style>
+
+<div class="event-form-shell py-3">
+  <div class="event-form-card">
+    <div class="event-form-header">
+      <h2>{% if edit %}Editar Evento{% else %}Novo Evento{% endif %}</h2>
+      <p>{% if edit %}Atualize as informações da gira e os recados recebidos.{% else %}Cadastre o evento com os detalhes da gira e recados das entidades.{% endif %}</p>
+    </div>
+    <div class="event-form-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="{{ form.titulo.id_for_label }}" class="form-label">{{ form.titulo.label }}</label>
+          {{ form.titulo }}
+          {{ form.titulo.errors }}
+        </div>
+        <div class="mb-3">
+          <label for="{{ form.tipo.id_for_label }}" class="form-label">{{ form.tipo.label }}</label>
+          {{ form.tipo }}
+          {{ form.tipo.errors }}
+        </div>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="{{ form.data.id_for_label }}" class="form-label">{{ form.data.label }}</label>
+            {{ form.data }}
+            {{ form.data.errors }}
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="{{ form.horario.id_for_label }}" class="form-label">{{ form.horario.label }}</label>
+            {{ form.horario }}
+            {{ form.horario.errors }}
+          </div>
+          <div class="col-md-4 mb-3 d-flex align-items-end">
+            <div class="form-check event-check-wrap w-100">
+              {{ form.gira_concluida }}
+              <label class="form-check-label" for="{{ form.gira_concluida.id_for_label }}">{{ form.gira_concluida.label }}</label>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.hora_inicio.id_for_label }}" class="form-label">{{ form.hora_inicio.label }}</label>
+            {{ form.hora_inicio }}
+            {{ form.hora_inicio.errors }}
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="{{ form.hora_fim.id_for_label }}" class="form-label">{{ form.hora_fim.label }}</label>
+            {{ form.hora_fim }}
+            {{ form.hora_fim.errors }}
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="{{ form.descricao.id_for_label }}" class="form-label">{{ form.descricao.label }}</label>
+          {{ form.descricao }}
+          {{ form.descricao.errors }}
+        </div>
+        <div class="mb-3">
+          <label for="{{ form.recados_entidades.id_for_label }}" class="form-label">{{ form.recados_entidades.label }}</label>
+          {{ form.recados_entidades }}
+          {{ form.recados_entidades.errors }}
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" type="submit">{% if edit %}Salvar Alterações{% else %}Criar Evento{% endif %}</button>
+          <a href="{% url 'lista_eventos' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+      </form>
+      {% if form.non_field_errors %}
+      <div class="mt-3 alert alert-danger mb-0">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -7,8 +7,12 @@
         <p class="text-muted mb-0">Registro dos banhos realizados.</p>
     </div>
     <div class="d-flex gap-2">
+        {% if perms.management.add_banho %}
         <a href="{% url 'criar_banho' %}" class="btn btn-primary">Novo Banho</a>
+        {% endif %}
+        {% if perms.management.view_banho %}
         <a href="{% url 'banhos_pdf' %}" target="_blank" class="btn btn-outline-secondary">Gerar PDF</a>
+        {% endif %}
     </div>
 </div>
 
@@ -61,7 +65,9 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if perms.management.change_banho %}
                         <a href="{% url 'editar_banho' banho.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

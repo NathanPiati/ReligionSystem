@@ -7,9 +7,15 @@
         <p class="text-muted mb-0">Resumo do estoque do centro.</p>
     </div>
     <div class="d-flex gap-2">
+        {% if perms.management.add_material %}
         <a href="{% url 'criar_material' %}" class="btn btn-primary">Novo Item</a>
+        {% endif %}
+        {% if perms.management.add_movimentacaoestoque %}
         <a href="{% url 'criar_movimentacao' %}" class="btn btn-outline-secondary">Registrar Movimentação</a>
+        {% endif %}
+        {% if perms.management.view_material %}
         <a href="{% url 'estoque_pdf' %}" target="_blank" class="btn btn-outline-secondary">Gerar PDF</a>
+        {% endif %}
     </div>
 </div>
 
@@ -58,7 +64,9 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if perms.management.change_material %}
                         <a href="{% url 'editar_material' material.id %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

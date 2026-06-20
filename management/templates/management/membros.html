@@ -3,7 +3,9 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Colaboradores</h1>
+    {% if perms.management.add_medium %}
     <a href="{% url 'criar_medium' %}" class="btn btn-primary">Novo Colaborador</a>
+    {% endif %}
 </div>
 
 <div class="card">
@@ -34,7 +36,9 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if perms.management.change_medium %}
                         <a href="{% url 'editar_medium' membro.id %}" class="btn btn-sm btn-outline-primary me-1">Editar</a>
+                        {% endif %}
                         <a href="{% url 'lista_tarefas_member' membro.id %}" class="btn btn-sm btn-outline-secondary">Tarefas</a>
                     </td>
                 </tr>
