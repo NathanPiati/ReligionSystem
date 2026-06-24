@@ -139,8 +139,44 @@ def lista_membros(request):
 
 @permission_required('management.view_evento', raise_exception=True)
 def lista_eventos(request):
-    eventos = Evento.objects.all().order_by('-data')
-    return render(request, 'management/eventos.html', {'eventos': eventos})
+    eventos = Evento.objects.all().order_by('-data', '-horario')
+
+    q = request.GET.get('q', '').strip()
+    tipo = request.GET.get('tipo', '').strip()
+    status = request.GET.get('status', '').strip()
+    data_inicio = request.GET.get('data_inicio', '').strip()
+    data_fim = request.GET.get('data_fim', '').strip()
+
+    if q:
+        eventos = eventos.filter(
+            Q(titulo__icontains=q) | Q(descricao__icontains=q))
+
+    if tipo:
+        eventos = eventos.filter(tipo=tipo)
+
+    if status == 'concluida':
+        eventos = eventos.filter(gira_concluida=True)
+    elif status == 'pendente':
+        eventos = eventos.filter(gira_concluida=False)
+
+    if data_inicio:
+        eventos = eventos.filter(data__gte=data_inicio)
+
+    if data_fim:
+        eventos = eventos.filter(data__lte=data_fim)
+
+    context = {
+        'eventos': eventos,
+        'tipos_evento': Evento.TIPO_CHOICES,
+        'filtros': {
+            'q': q,
+            'tipo': tipo,
+            'status': status,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim,
+        },
+    }
+    return render(request, 'management/eventos.html', context)
 
 
 @permission_required('management.view_financeiro', raise_exception=True)

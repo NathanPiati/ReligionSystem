@@ -76,6 +76,46 @@
     {% endif %}
 </div>
 
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label for="id_q" class="form-label mb-1">Buscar</label>
+                <input id="id_q" type="text" name="q" class="form-control" value="{{ filtros.q }}" placeholder="Título ou descrição">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="id_tipo" class="form-label mb-1">Tipo</label>
+                <select id="id_tipo" name="tipo" class="form-select">
+                    <option value="">Todos</option>
+                    {% for valor, nome in tipos_evento %}
+                    <option value="{{ valor }}" {% if filtros.tipo == valor %}selected{% endif %}>{{ nome }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="id_status" class="form-label mb-1">Status</label>
+                <select id="id_status" name="status" class="form-select">
+                    <option value="" {% if not filtros.status %}selected{% endif %}>Todos</option>
+                    <option value="pendente" {% if filtros.status == 'pendente' %}selected{% endif %}>Pendente</option>
+                    <option value="concluida" {% if filtros.status == 'concluida' %}selected{% endif %}>Concluída</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="id_data_inicio" class="form-label mb-1">Data inicial</label>
+                <input id="id_data_inicio" type="date" name="data_inicio" class="form-control" value="{{ filtros.data_inicio }}">
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="id_data_fim" class="form-label mb-1">Data final</label>
+                <input id="id_data_fim" type="date" name="data_fim" class="form-control" value="{{ filtros.data_fim }}">
+            </div>
+            <div class="col-12 d-flex gap-2 mt-2">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'lista_eventos' %}" class="btn btn-outline-secondary">Limpar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card event-table-wrap">
     <div class="card-body">
         <div class="table-responsive">
