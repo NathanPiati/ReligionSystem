@@ -7,12 +7,51 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; }
+        :root {
+            --sidebar-width: 250px;
+        }
+
+        html, body { height: 100%; }
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .layout-root {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .layout-root > .row {
+            flex: 1;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar-col {
+                flex: 0 0 var(--sidebar-width);
+                max-width: var(--sidebar-width);
+            }
+
+            .content-col {
+                flex: 1 0 0;
+                max-width: calc(100% - var(--sidebar-width));
+            }
+        }
+
         .sidebar { min-height: 100vh; background-color: #2c3e50; color: white; }
         .sidebar a { color: #bdc3c7; text-decoration: none; padding: 10px 20px; display: block; }
         .sidebar a:hover { background-color: #34495e; color: white; }
         .sidebar a.active { background-color: #3498db; color: white; }
-        .content { padding: 20px; }
+        .content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+        }
+        .page-content {
+            flex: 1 0 auto;
+        }
         .card { border: none; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
 
         .mobile-header {
@@ -70,7 +109,7 @@
         }
 
         .app-footer {
-            margin-top: 1.5rem;
+            margin-top: auto;
             padding: 0.9rem 1rem;
             border-top: 1px solid #d6e0ea;
             color: #53657a;
@@ -103,7 +142,7 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid">
+    <div class="container-fluid layout-root">
         <div class="row">
             {% if not request.resolver_match or request.resolver_match.url_name != 'login' %}
             <div class="d-md-none mobile-header d-flex justify-content-between align-items-center">
@@ -137,7 +176,7 @@
             </div>
 
             <!-- Sidebar -->
-            <div class="col-md-2 sidebar d-none d-md-block">
+            <div class="sidebar-col sidebar d-none d-md-block">
                 <div class="py-4 text-center">
                     <h4>Tenda de Aruanda</h4>
                 </div>
@@ -158,8 +197,10 @@
             </div>
             {% endif %}
             <!-- Main Content -->
-            <div class="{% if not request.resolver_match or request.resolver_match.url_name != 'login' %}col-12 col-md-10{% else %}col-12{% endif %} content">
-                {% block content %}{% endblock %}
+            <div class="col-12 {% if not request.resolver_match or request.resolver_match.url_name != 'login' %}content-col{% endif %} content">
+                <main class="page-content">
+                    {% block content %}{% endblock %}
+                </main>
                 <footer class="app-footer">
                     &copy; 2026 InovaSys - Desenvolvido por InovaCore. Todos os direitos reservados.
                     <p>Suporte: Segunda a sexta, 9h as 18h - Whatsapp: (16) 99146-8383</p>
