@@ -1,8 +1,11 @@
+from datetime import date
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 from .models import Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
+from django.db.models.functions import TruncMonth
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.models import Group, Permission
@@ -34,6 +37,32 @@ User = get_user_model()
 
 def can_access_admin_panel(user):
     return user.is_superuser or user.groups.filter(name='ADM').exists()
+
+
+def build_finance_chart_data(limit=6):
+    monthly_rows = list(
+        Financeiro.objects.annotate(month=TruncMonth('data'))
+        .values('month')
+        .annotate(
+            entradas=Sum('valor', filter=Q(tipo='ENTRADA')),
+            saídas=Sum('valor', filter=Q(tipo='SAIDA')),
+        )
+        .order_by('-month')[:limit]
+    )
+    monthly_rows.reverse()
+
+    labels = [row['month'].strftime('%b/%Y').capitalize()
+              for row in monthly_rows if row['month']]
+    entradas = [float(row['entradas'] or 0) for row in monthly_rows]
+    saidas = [float(row['saídas'] or 0) for row in monthly_rows]
+    saldo = [entrada - saida for entrada, saida in zip(entradas, saidas)]
+
+    return {
+        'labels': labels,
+        'entradas': entradas,
+        'saidas': saidas,
+        'saldo': saldo,
+    }
 
 
 @require_POST
@@ -127,6 +156,8 @@ def dashboard(request):
     total_membros = None
     proximos_eventos = []
     saldo_final = None
+    financeiro_chart = None
+    eventos_tipo_chart = None
     can_view_medium = request.user.has_perm('management.view_medium')
     can_view_evento = request.user.has_perm('management.view_evento')
     can_view_financeiro = request.user.has_perm('management.view_financeiro')
@@ -136,6 +167,17 @@ def dashboard(request):
 
     if can_view_evento:
         proximos_eventos = Evento.objects.all().order_by('data')[:5]
+        tipo_labels = dict(Evento.TIPO_CHOICES)
+        eventos_por_tipo = (
+            Evento.objects.filter(data__gte=date.today())
+            .values('tipo')
+            .annotate(total=Count('id'))
+            .order_by('tipo')
+        )
+        eventos_tipo_chart = {
+            'labels': [tipo_labels[item['tipo']] for item in eventos_por_tipo],
+            'values': [item['total'] for item in eventos_por_tipo],
+        }
 
     if can_view_financeiro:
         saldo = Financeiro.objects.filter(tipo='ENTRADA').aggregate(Sum('valor'))[
@@ -143,11 +185,14 @@ def dashboard(request):
         despesas = Financeiro.objects.filter(tipo='SAIDA').aggregate(Sum('valor'))[
             'valor__sum'] or 0
         saldo_final = saldo - despesas
+        financeiro_chart = build_finance_chart_data()
 
     context = {
         'total_membros': total_membros,
         'proximos_eventos': proximos_eventos,
         'saldo_final': saldo_final,
+        'financeiro_chart': financeiro_chart,
+        'eventos_tipo_chart': eventos_tipo_chart,
         'can_view_medium': can_view_medium,
         'can_view_evento': can_view_evento,
         'can_view_financeiro': can_view_financeiro,
@@ -217,6 +262,7 @@ def financeiro(request):
         'total_entradas': total_entradas,
         'total_saidas': total_saidas,
         'saldo_final': saldo_final,
+        'financeiro_chart': build_finance_chart_data(limit=8),
     }
     return render(request, 'management/financeiro.html', context)
 
