@@ -21,7 +21,7 @@
         <div class="card text-white bg-success mb-3">
             <div class="card-body">
                 <h5 class="card-title">Saldo Financeiro</h5>
-                <p class="card-text fs-2">R$ {{ saldo_final }}</p>
+                <p class="card-text fs-2 {% if saldo_final < 0 %}text-danger{% endif %}">R$ {{ saldo_final|floatformat:2 }}</p>
             </div>
         </div>
     </div>
