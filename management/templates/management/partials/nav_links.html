@@ -1,0 +1,49 @@
+<a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+</a>
+{% if perms.management.view_medium %}
+<a href="{% url 'lista_membros' %}" class="{% if request.resolver_match.url_name == 'lista_membros' %}active{% endif %}">
+    <i class="bi bi-people me-2"></i> Colaboradores
+</a>
+{% endif %}
+{% if perms.management.view_evento %}
+<a href="{% url 'lista_eventos' %}" class="{% if request.resolver_match.url_name == 'lista_eventos' %}active{% endif %}">
+    <i class="bi bi-calendar-event me-2"></i> Eventos
+</a>
+{% endif %}
+{% if perms.management.view_banho %}
+<a href="{% url 'lista_banhos' %}" class="{% if request.resolver_match.url_name == 'lista_banhos' %}active{% endif %}">
+    <i class="bi bi-droplet me-2"></i> Banhos
+</a>
+{% endif %}
+{% if perms.management.view_tarefa %}
+<a href="{% url 'lista_tarefas' %}" class="{% if request.resolver_match.url_name == 'lista_tarefas' or request.resolver_match.url_name == 'lista_tarefas_member' %}active{% endif %}">
+    <i class="bi bi-list-task me-2"></i> Tarefas
+</a>
+{% endif %}
+{% if perms.management.view_financeiro %}
+<a href="{% url 'financeiro' %}" class="{% if request.resolver_match.url_name == 'financeiro' %}active{% endif %}">
+    <i class="bi bi-cash-stack me-2"></i> Financeiro
+</a>
+{% endif %}
+{% if perms.management.view_material %}
+<a href="{% url 'estoque' %}" class="{% if request.resolver_match.url_name == 'estoque' %}active{% endif %}">
+    <i class="bi bi-box-seam me-2"></i> Estoque
+</a>
+{% endif %}
+{% if request.user.is_superuser %}
+<a href="{% url 'painel_administrativo' %}" class="{% if request.resolver_match.url_name == 'painel_administrativo' %}active{% endif %}">
+    <i class="bi bi-shield-lock me-2"></i> Painel Admin
+</a>
+{% else %}
+    {% for group in request.user.groups.all %}
+        {% if group.name == 'ADM' %}
+<a href="{% url 'painel_administrativo' %}" class="{% if request.resolver_match.url_name == 'painel_administrativo' %}active{% endif %}">
+    <i class="bi bi-shield-lock me-2"></i> Painel Admin
+</a>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+<a href="/admin/" target="_blank" rel="noopener">
+    <i class="bi bi-gear me-2"></i> Administração Django
+</a>

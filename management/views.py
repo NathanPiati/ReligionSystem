@@ -4,9 +4,10 @@ from django.core.exceptions import PermissionDenied
 from .models import Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho
 from django.db.models import Sum, Q
 from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, logout
 from django.contrib.auth.models import Group, Permission
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from .forms import (
     MediumForm,
     EventoForm,
@@ -17,6 +18,7 @@ from .forms import (
     BanhoForm,
     GroupPermissionForm,
     UserGroupAssignmentForm,
+    UserCreationWithGroupsForm,
     UserSelectorForm,
     GroupSelectorForm,
 )
@@ -30,9 +32,20 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 User = get_user_model()
 
 
+def can_access_admin_panel(user):
+    return user.is_superuser or user.groups.filter(name='ADM').exists()
+
+
+@require_POST
+def logout_view(request):
+    logout(request)
+    messages.success(request, 'Logout realizado com sucesso.✅')
+    return redirect('login')
+
+
 @login_required
 def painel_administrativo(request):
-    if not request.user.is_superuser:
+    if not can_access_admin_panel(request.user):
         raise PermissionDenied
 
     users = User.objects.prefetch_related('groups').order_by('username')
@@ -56,6 +69,7 @@ def painel_administrativo(request):
     user_form = UserGroupAssignmentForm(
         initial={'grupos': selected_user.groups.all()} if selected_user else None
     )
+    create_user_form = UserCreationWithGroupsForm()
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -80,6 +94,15 @@ def painel_administrativo(request):
                 messages.success(
                     request, 'Grupos do usuário atualizados com sucesso.')
                 return redirect('painel_administrativo')
+        elif action == 'create_user':
+            create_user_form = UserCreationWithGroupsForm(request.POST)
+            if create_user_form.is_valid():
+                new_user = create_user_form.save()
+                messages.success(
+                    request,
+                    f'Usuário "{new_user.username}" criado e vinculado aos grupos selecionados.',
+                )
+                return redirect(f'{request.path}?usuario={new_user.pk}')
 
     context = {
         'users': users,
@@ -89,6 +112,7 @@ def painel_administrativo(request):
         'selected_user': selected_user,
         'group_form': group_form,
         'user_form': user_form,
+        'create_user_form': create_user_form,
         'group_selector_form': GroupSelectorForm(initial={'grupo': selected_group}),
         'user_selector_form': UserSelectorForm(initial={'usuario': selected_user}),
         'total_users': users.count(),

@@ -27,6 +27,8 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "change-me-in-production")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env_bool("DJANGO_DEBUG", True)
 
+APP_VERSION = os.getenv("APP_VERSION", "1.06.26")
+
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
 
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
@@ -69,6 +71,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.app_version',
             ],
         },
     },
@@ -95,8 +98,8 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('DB_NAME', 'umbanda_db'),
-            'USER': os.getenv('DB_USER', 'umbanda_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'USER': os.getenv('DB_USER', 'umbanda_user2'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'Inovatech@2025'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
         }
