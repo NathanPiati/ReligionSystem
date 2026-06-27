@@ -1,0 +1,92 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Logs de Atividade</h1>
+        <p class="text-muted mb-0">Histórico de ações que podem alterar dados no sistema.</p>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label for="method" class="form-label">Método</label>
+                <select id="method" name="method" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="POST" {% if filtros.method == 'POST' %}selected{% endif %}>POST</option>
+                    <option value="PUT" {% if filtros.method == 'PUT' %}selected{% endif %}>PUT</option>
+                    <option value="PATCH" {% if filtros.method == 'PATCH' %}selected{% endif %}>PATCH</option>
+                    <option value="DELETE" {% if filtros.method == 'DELETE' %}selected{% endif %}>DELETE</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">Status HTTP</label>
+                <input id="status" type="text" name="status" value="{{ filtros.status }}" class="form-control" placeholder="200, 403, 500...">
+            </div>
+            <div class="col-md-4">
+                <label for="q" class="form-label">Buscar</label>
+                <input id="q" type="text" name="q" value="{{ filtros.q }}" class="form-control" placeholder="Usuário, rota ou ação...">
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Registros encontrados</span>
+        <span class="badge bg-secondary">{{ total_logs }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Usuário</th>
+                        <th>Ação</th>
+                        <th>Rota</th>
+                        <th>Método</th>
+                        <th>Status</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page_obj %}
+                    <tr>
+                        <td>{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td>{{ log.username_snapshot|default:"Anonymous" }}</td>
+                        <td>{{ log.action_label|default:"-" }}</td>
+                        <td>{{ log.path }}</td>
+                        <td><span class="badge bg-dark">{{ log.method }}</span></td>
+                        <td>{{ log.status_code }}</td>
+                        <td>{{ log.ip_address|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">Nenhum log encontrado para os filtros informados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <small class="text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</small>
+        <div class="d-flex gap-2">
+            {% if page_obj.has_previous %}
+            <a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.previous_page_number }}&method={{ filtros.method }}&status={{ filtros.status }}&q={{ filtros.q }}">Anterior</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a class="btn btn-sm btn-outline-secondary" href="?page={{ page_obj.next_page_number }}&method={{ filtros.method }}&status={{ filtros.status }}&q={{ filtros.q }}">Próxima</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

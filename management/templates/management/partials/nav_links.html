@@ -41,6 +41,9 @@
 <a href="{% url 'painel_administrativo' %}" class="{% if request.resolver_match.url_name == 'painel_administrativo' %}active{% endif %}">
     <i class="bi bi-shield-lock me-2"></i> Painel Admin
 </a>
+<a href="{% url 'activity_logs' %}" class="{% if request.resolver_match.url_name == 'activity_logs' %}active{% endif %}">
+    <i class="bi bi-journal-text me-2"></i> Logs de Atividade
+</a>
         {% endif %}
     {% endfor %}
 {% endif %}

@@ -1,10 +1,12 @@
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
-from .models import Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho
-from django.db.models import Sum, Q, Count
+from django.core.paginator import Paginator
+from .models import ActivityLog, Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho
+from django.db.models import Sum, Q, Count, F
 from django.db.models.functions import TruncMonth
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import get_user_model, logout
@@ -39,6 +41,10 @@ def can_access_admin_panel(user):
     return user.is_superuser or user.groups.filter(name='ADM').exists()
 
 
+def can_access_activity_logs(user):
+    return user.is_authenticated and user.groups.filter(name='ADM').exists()
+
+
 def build_finance_chart_data(limit=6):
     monthly_rows = list(
         Financeiro.objects.annotate(month=TruncMonth('data'))
@@ -63,6 +69,22 @@ def build_finance_chart_data(limit=6):
         'saidas': saidas,
         'saldo': saldo,
     }
+
+
+def parse_currency_input(value: str) -> Decimal:
+    raw = (value or '').strip().replace('R$', '').replace(' ', '')
+    if not raw:
+        return Decimal('0')
+
+    if ',' in raw and '.' in raw:
+        raw = raw.replace('.', '').replace(',', '.')
+    elif ',' in raw:
+        raw = raw.replace(',', '.')
+
+    parsed = Decimal(raw)
+    if parsed < 0:
+        raise InvalidOperation
+    return parsed
 
 
 @require_POST
@@ -149,6 +171,44 @@ def painel_administrativo(request):
         'total_permissions': permissions.count(),
     }
     return render(request, 'management/painel_administrativo.html', context)
+
+
+@login_required
+def activity_logs(request):
+    if not can_access_activity_logs(request.user):
+        raise PermissionDenied
+
+    logs = ActivityLog.objects.select_related('user').all()
+    method = request.GET.get('method', '').strip().upper()
+    status = request.GET.get('status', '').strip()
+    search = request.GET.get('q', '').strip()
+
+    if method:
+        logs = logs.filter(method=method)
+
+    if status.isdigit():
+        logs = logs.filter(status_code=int(status))
+
+    if search:
+        logs = logs.filter(
+            Q(username_snapshot__icontains=search)
+            | Q(path__icontains=search)
+            | Q(action_label__icontains=search)
+        )
+
+    paginator = Paginator(logs, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'page_obj': page_obj,
+        'total_logs': logs.count(),
+        'filtros': {
+            'method': method,
+            'status': status,
+            'q': search,
+        },
+    }
+    return render(request, 'management/activity_logs.html', context)
 
 
 @login_required
@@ -331,15 +391,116 @@ def financeiro_pdf(request):
 @permission_required('management.view_material', raise_exception=True)
 def lista_estoque(request):
     materiais = Material.objects.all()
+    materiais_baixo_estoque = materiais.filter(
+        quantidade_atual__lte=F('quantidade_minima')
+    ).order_by('nome')
     total_items = materiais.count()
     total_quantidade = materiais.aggregate(
         total=Sum('quantidade_atual'))['total'] or 0
     context = {
         'materiais': materiais,
+        'materiais_baixo_estoque': materiais_baixo_estoque,
+        'colaboradores_ativos': Medium.objects.filter(ativo=True).order_by('nome_completo'),
         'total_items': total_items,
         'total_quantidade': total_quantidade,
     }
     return render(request, 'management/estoque.html', context)
+
+
+@permission_required('management.view_material', raise_exception=True)
+@require_POST
+def lista_compra_pdf(request):
+    materiais_baixo_estoque = list(
+        Material.objects.filter(quantidade_atual__lte=F(
+            'quantidade_minima')).order_by('nome')
+    )
+
+    if not materiais_baixo_estoque:
+        messages.warning(
+            request, 'Não há itens com estoque baixo para gerar lista de compra.')
+        return redirect('estoque')
+
+    colaborador_id = request.POST.get('colaborador_responsavel')
+    colaborador = Medium.objects.filter(pk=colaborador_id, ativo=True).first()
+    if not colaborador:
+        messages.error(request, 'Selecione um colaborador responsável válido.')
+        return redirect('estoque')
+
+    itens_compra = []
+    total_previsto = Decimal('0')
+
+    for material in materiais_baixo_estoque:
+        campo_valor = f'valor_item_{material.pk}'
+        valor_bruto = request.POST.get(campo_valor, '')
+
+        try:
+            valor = parse_currency_input(valor_bruto)
+        except (InvalidOperation, ValueError):
+            messages.error(
+                request, f'Valor inválido informado para o item "{material.nome}".')
+            return redirect('estoque')
+
+        total_previsto += valor
+        itens_compra.append({
+            'material': material,
+            'valor': valor,
+        })
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=18,
+    )
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(
+        Paragraph('Lista de Compra - Estoque Baixo', styles['Title']))
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(
+        f'Responsável pela compra: {colaborador.nome_completo}', styles['Normal']))
+    elements.append(
+        Paragraph(f'Itens com estoque baixo: {len(itens_compra)}', styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    data = [['Codigo', 'Material', 'Qtd. Atual', 'Qtd. Mínima',
+             'Unidade', 'Valor Previsto (R$)']]
+    for item in itens_compra:
+        material = item['material']
+        data.append([
+            str(material.id),
+            material.nome,
+            str(material.quantidade_atual),
+            str(material.quantidade_minima),
+            material.unidade_medida,
+            f'{item["valor"]:.2f}',
+        ])
+
+    data.append(['', '', '', '', 'Total Previsto', f'{total_previsto:.2f}'])
+
+    table = Table(data, colWidths=[50, 145, 60, 60, 60, 115])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.gray),
+        ('BACKGROUND', (0, 1), (-1, -2), colors.whitesmoke),
+        ('BACKGROUND', (4, -1), (-1, -1), colors.lightgrey),
+        ('ALIGN', (2, 1), (5, -1), 'RIGHT'),
+    ]))
+
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="lista_compra_estoque.pdf"'
+    return response
 
 
 @permission_required('management.view_material', raise_exception=True)
@@ -364,11 +525,12 @@ def estoque_pdf(request):
         Paragraph(f'Quantidade total: {total_quantidade}', styles['Normal']))
     elements.append(Spacer(1, 12))
 
-    data = [['Material', 'Categoria', 'Qtd. Atual',
+    data = [['Codigo', 'Material', 'Categoria', 'Qtd. Atual',
              'Qtd. Mínima', 'Unidade', 'Status']]
     for m in materiais:
         status = 'Estoque Baixo' if m.quantidade_atual <= m.quantidade_minima else 'Normal'
         data.append([
+            str(m.id),
             m.nome,
             m.categoria or '-',
             str(m.quantidade_atual),
@@ -377,7 +539,7 @@ def estoque_pdf(request):
             status,
         ])
 
-    table = Table(data, colWidths=[140, 90, 60, 60, 60, 80])
+    table = Table(data, colWidths=[45, 120, 85, 55, 55, 55, 80])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -385,7 +547,7 @@ def estoque_pdf(request):
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.gray),
         ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
-        ('ALIGN', (2, 1), (4, -1), 'RIGHT'),
+        ('ALIGN', (3, 1), (5, -1), 'RIGHT'),
     ]))
 
     elements.append(table)

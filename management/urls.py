@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
+    path('logs-atividade/', views.activity_logs, name='activity_logs'),
     path('painel-administrativo/', views.painel_administrativo,
          name='painel_administrativo'),
     path('membros/', views.lista_membros, name='lista_membros'),
@@ -11,6 +12,8 @@ urlpatterns = [
     path('financeiro/pdf/', views.financeiro_pdf, name='financeiro_pdf'),
     path('banhos/pdf/', views.banhos_pdf, name='banhos_pdf'),
     path('estoque/pdf/', views.estoque_pdf, name='estoque_pdf'),
+    path('estoque/lista-compra/pdf/', views.lista_compra_pdf,
+         name='lista_compra_pdf'),
     path('estoque/', views.lista_estoque, name='estoque'),
     path('criar/material/', views.criar_material, name='criar_material'),
     path('editar/material/<int:pk>/',

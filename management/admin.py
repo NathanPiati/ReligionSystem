@@ -1,4 +1,4 @@
-from .models import Material, MovimentacaoEstoque
+from .models import ActivityLog, Material, MovimentacaoEstoque
 from django.contrib import admin
 from .models import Medium, Evento, Presenca, Financeiro
 
@@ -40,3 +40,41 @@ class MaterialAdmin(admin.ModelAdmin):
 class MovimentacaoEstoqueAdmin(admin.ModelAdmin):
     list_display = ('material', 'quantidade', 'tipo', 'data')
     list_filter = ('tipo', 'data')
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'username_snapshot',
+                    'action_label', 'method', 'path', 'status_code', 'ip_address')
+    list_filter = ('method', 'status_code', 'created_at')
+    search_fields = ('username_snapshot', 'action_label',
+                     'path', 'ip_address', 'user_agent')
+    readonly_fields = (
+        'created_at',
+        'user',
+        'username_snapshot',
+        'action_label',
+        'method',
+        'path',
+        'status_code',
+        'ip_address',
+        'user_agent',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def _is_adm_group(self, request):
+        return request.user.is_authenticated and request.user.groups.filter(name='ADM').exists()
+
+    def has_module_permission(self, request):
+        return self._is_adm_group(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._is_adm_group(request)
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -19,6 +19,14 @@
     </div>
 </div>
 
+{% if messages %}
+<div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} mb-2">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <div class="row mb-4">
     <div class="col-md-4 mb-3">
         <div class="card border-primary h-100">
@@ -38,11 +46,75 @@
     </div>
 </div>
 
+{% if materiais_baixo_estoque %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <strong>Lista de Compra</strong>
+            <div class="small text-muted">Itens com estoque baixo: {{ materiais_baixo_estoque|length }}</div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'lista_compra_pdf' %}" target="_blank">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="colaborador_responsavel" class="form-label">Colaborador responsável pela compra</label>
+                <select name="colaborador_responsavel" id="colaborador_responsavel" class="form-select" required>
+                    <option value="">Selecione...</option>
+                    {% for colaborador in colaboradores_ativos %}
+                    <option value="{{ colaborador.id }}">{{ colaborador.nome_completo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Material</th>
+                            <th>Qtd. Atual</th>
+                            <th>Qtd. Mínima</th>
+                            <th>Valor previsto para compra (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for material in materiais_baixo_estoque %}
+                        <tr>
+                            <td>{{ material.id }}</td>
+                            <td>{{ material.nome }}</td>
+                            <td>{{ material.quantidade_atual }} {{ material.unidade_medida }}</td>
+                            <td>{{ material.quantidade_minima }} {{ material.unidade_medida }}</td>
+                            <td>
+                                <input
+                                    type="text"
+                                    name="valor_item_{{ material.id }}"
+                                    class="form-control"
+                                    inputmode="decimal"
+                                    placeholder="0,00"
+                                    required
+                                >
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-warning">Gerar Lista de Compra (PDF)</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-body">
         <table class="table table-hover">
             <thead>
                 <tr>
+                    <th>Codigo</th>
                     <th>Material</th>
                     <th>Categoria</th>
                     <th>Qtd. Atual</th>
@@ -53,6 +125,7 @@
             <tbody>
                 {% for material in materiais %}
                 <tr>
+                    <td>{{ material.id }}</td>
                     <td>{{ material.nome }}</td>
                     <td>{{ material.categoria }}</td>
                     <td>{{ material.quantidade_atual }} {{ material.unidade_medida }}</td>

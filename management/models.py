@@ -167,3 +167,34 @@ class MovimentacaoEstoque(models.Model):
             self.material.quantidade_atual -= self.quantidade
         self.material.save()
         super().save(*args, **kwargs)
+
+
+class ActivityLog(models.Model):
+    user = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='activity_logs',
+    )
+    username_snapshot = models.CharField(max_length=150, blank=True)
+    method = models.CharField(max_length=10)
+    path = models.CharField(max_length=255)
+    action_label = models.CharField(max_length=200, blank=True)
+    status_code = models.PositiveSmallIntegerField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['created_at']),
+            models.Index(fields=['path']),
+            models.Index(fields=['method']),
+            models.Index(fields=['action_label']),
+        ]
+
+    def __str__(self):
+        user_label = self.username_snapshot or 'Anonymous'
+        return f'{user_label} - {self.method} {self.path} ({self.status_code})'
