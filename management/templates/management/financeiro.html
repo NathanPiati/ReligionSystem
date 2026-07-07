@@ -1,4 +1,5 @@
 {% extends 'management/base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -120,7 +121,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
 <script>
     const financeiroMensalCanvas = document.getElementById('financeiroMensalChart');
     if (financeiroMensalCanvas) {
