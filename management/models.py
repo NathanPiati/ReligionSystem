@@ -148,6 +148,62 @@ class Material(models.Model):
         return f"{self.nome} ({self.quantidade_atual} {self.unidade_medida})"
 
 
+class ListaCompra(models.Model):
+    STATUS_CHOICES = [
+        ('GERADA', 'Gerada'),
+        ('EM_ANDAMENTO', 'Em andamento'),
+        ('FINALIZADA', 'Finalizada'),
+        ('CANCELADA', 'Cancelada'),
+    ]
+
+    responsavel = models.ForeignKey(
+        Medium,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='listas_compra',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='GERADA',
+    )
+    total_previsto = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+    )
+    observacao = models.TextField(blank=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Lista de Compra #{self.id}'
+
+
+class ListaCompraItem(models.Model):
+    lista = models.ForeignKey(
+        ListaCompra,
+        on_delete=models.CASCADE,
+        related_name='itens',
+    )
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    material_nome = models.CharField(max_length=100)
+    categoria = models.CharField(max_length=50, blank=True)
+    quantidade_atual = models.IntegerField()
+    quantidade_minima = models.IntegerField()
+    unidade_medida = models.CharField(max_length=20)
+    valor_previsto = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f'{self.material_nome} - Lista #{self.lista_id}'
+
+
 class MovimentacaoEstoque(models.Model):
     TIPO_MOV = [
         ('ENTRADA', 'Entrada (Compra/Doação)'),

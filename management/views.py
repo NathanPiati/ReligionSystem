@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from .models import ActivityLog, Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho
+from .models import ActivityLog, Medium, Evento, Financeiro, Presenca, Material, Tarefa, Banho, ListaCompra, ListaCompraItem
 from django.db.models import Sum, Q, Count, F
 from django.db.models.functions import TruncMonth
 from django.contrib.auth.decorators import login_required, permission_required
@@ -129,8 +129,7 @@ def painel_administrativo(request):
             group_form = GroupPermissionForm(
                 request.POST, instance=selected_group)
             if group_form.is_valid():
-                group = group_form.save()
-                group_form.save_m2m()
+                group_form.save()
                 messages.success(request, 'Grupo salvo com sucesso.')
                 return redirect('painel_administrativo')
         elif action == 'save_user':
@@ -401,10 +400,93 @@ def lista_estoque(request):
         'materiais': materiais,
         'materiais_baixo_estoque': materiais_baixo_estoque,
         'colaboradores_ativos': Medium.objects.filter(ativo=True).order_by('nome_completo'),
+        'listas_compra_recent': ListaCompra.objects.select_related('responsavel').order_by('-data_criacao')[:5],
         'total_items': total_items,
         'total_quantidade': total_quantidade,
     }
     return render(request, 'management/estoque.html', context)
+
+
+@permission_required('management.view_material', raise_exception=True)
+def listas_compra(request):
+    listas = ListaCompra.objects.select_related(
+        'responsavel').prefetch_related('itens').order_by('-data_criacao')
+    return render(request, 'management/listas_compra.html', {
+        'listas_compra': listas,
+    })
+
+
+@permission_required('management.view_material', raise_exception=True)
+def detalhe_lista_compra(request, pk):
+    lista = get_object_or_404(
+        ListaCompra.objects.select_related(
+            'responsavel').prefetch_related('itens__material'),
+        pk=pk,
+    )
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'status':
+            novo_status = request.POST.get('status')
+            status_validos = {valor for valor, _ in ListaCompra.STATUS_CHOICES}
+            if novo_status in status_validos:
+                lista.status = novo_status
+                lista.save(update_fields=['status', 'data_atualizacao'])
+                messages.success(
+                    request, f'Lista #{lista.id} atualizada com sucesso.')
+                return redirect('detalhe_lista_compra', pk=lista.id)
+            messages.error(request, 'Status inválido para a lista de compra.')
+        elif action == 'delete':
+            lista_id = lista.id
+            lista.delete()
+            messages.success(
+                request, f'Lista de compra #{lista_id} removida com sucesso.')
+            return redirect('listas_compra')
+
+    return render(request, 'management/detalhe_lista_compra.html', {
+        'lista': lista,
+        'status_choices': ListaCompra.STATUS_CHOICES,
+    })
+
+
+def _salvar_lista_compra(materiais_baixo_estoque, colaborador, request):
+    lista_compra = ListaCompra.objects.create(
+        responsavel=colaborador,
+        status='GERADA',
+    )
+
+    itens_compra = []
+    total_previsto = Decimal('0')
+
+    for material in materiais_baixo_estoque:
+        campo_valor = f'valor_item_{material.pk}'
+        valor_bruto = request.POST.get(campo_valor, '')
+
+        try:
+            valor = parse_currency_input(valor_bruto)
+        except (InvalidOperation, ValueError):
+            lista_compra.delete()
+            raise
+
+        total_previsto += valor
+        ListaCompraItem.objects.create(
+            lista=lista_compra,
+            material=material,
+            material_nome=material.nome,
+            categoria=material.categoria,
+            quantidade_atual=material.quantidade_atual,
+            quantidade_minima=material.quantidade_minima,
+            unidade_medida=material.unidade_medida,
+            valor_previsto=valor,
+        )
+        itens_compra.append({
+            'material': material,
+            'valor': valor,
+        })
+
+    lista_compra.total_previsto = total_previsto
+    lista_compra.save(update_fields=['total_previsto', 'data_atualizacao'])
+    return lista_compra, itens_compra
 
 
 @permission_required('management.view_material', raise_exception=True)
@@ -426,25 +508,18 @@ def lista_compra_pdf(request):
         messages.error(request, 'Selecione um colaborador responsável válido.')
         return redirect('estoque')
 
-    itens_compra = []
-    total_previsto = Decimal('0')
+    try:
+        lista_compra, itens_compra = _salvar_lista_compra(
+            materiais_baixo_estoque,
+            colaborador,
+            request,
+        )
+    except (InvalidOperation, ValueError):
+        messages.error(
+            request, 'Valor inválido informado em um dos itens da lista de compra.')
+        return redirect('estoque')
 
-    for material in materiais_baixo_estoque:
-        campo_valor = f'valor_item_{material.pk}'
-        valor_bruto = request.POST.get(campo_valor, '')
-
-        try:
-            valor = parse_currency_input(valor_bruto)
-        except (InvalidOperation, ValueError):
-            messages.error(
-                request, f'Valor inválido informado para o item "{material.nome}".')
-            return redirect('estoque')
-
-        total_previsto += valor
-        itens_compra.append({
-            'material': material,
-            'valor': valor,
-        })
+    total_previsto = lista_compra.total_previsto
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -459,7 +534,7 @@ def lista_compra_pdf(request):
     elements = []
 
     elements.append(
-        Paragraph('Lista de Compra - Estoque Baixo', styles['Title']))
+        Paragraph(f'Lista de Compra #{lista_compra.id} - Estoque Baixo', styles['Title']))
     elements.append(Spacer(1, 12))
     elements.append(Paragraph(
         f'Responsável pela compra: {colaborador.nome_completo}', styles['Normal']))
@@ -499,7 +574,7 @@ def lista_compra_pdf(request):
     buffer.seek(0)
 
     response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = 'inline; filename="lista_compra_estoque.pdf"'
+    response['Content-Disposition'] = f'inline; filename="lista_compra_{lista_compra.id}.pdf"'
     return response
 
 

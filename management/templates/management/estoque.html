@@ -4,7 +4,7 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <div>
         <h1 class="h2">Controle de Estoque</h1>
-        <p class="text-muted mb-0">Resumo do estoque do centro.</p>
+        <p class="text-muted mb-0">Resumo do estoque.</p>
     </div>
     <div class="d-flex gap-2">
         {% if perms.management.add_material %}
@@ -109,6 +109,58 @@
 </div>
 {% endif %}
 
+{% if listas_compra_recent %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <strong>Listas de Compra Salvas</strong>
+            <div class="small text-muted">Acesso rápido às últimas listas geradas</div>
+        </div>
+        <a href="{% url 'listas_compra' %}" class="btn btn-sm btn-outline-secondary">Ver todas</a>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Responsável</th>
+                    <th>Status</th>
+                    <th>Total previsto</th>
+                    <th>Criada em</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lista in listas_compra_recent %}
+                <tr>
+                    <td>#{{ lista.id }}</td>
+                    <td>{{ lista.responsavel.nome_completo|default:"-" }}</td>
+                    <td>
+                        {% if lista.status == 'GERADA' %}
+                        <span class="badge bg-warning text-dark">{{ lista.get_status_display }}</span>
+                        {% elif lista.status == 'EM_ANDAMENTO' %}
+                        <span class="badge bg-info text-dark">{{ lista.get_status_display }}</span>
+                        {% elif lista.status == 'FINALIZADA' %}
+                        <span class="badge bg-success">{{ lista.get_status_display }}</span>
+                        {% elif lista.status == 'CANCELADA' %}
+                        <span class="badge bg-danger">{{ lista.get_status_display }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ lista.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>R$ {{ lista.total_previsto }}</td>
+                    <td>{{ lista.data_criacao|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'detalhe_lista_compra' lista.id %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-body">
         <table class="table table-hover">
@@ -118,6 +170,7 @@
                     <th>Material</th>
                     <th>Categoria</th>
                     <th>Qtd. Atual</th>
+                    <th>Qtd. Mínima</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
@@ -129,6 +182,7 @@
                     <td>{{ material.nome }}</td>
                     <td>{{ material.categoria }}</td>
                     <td>{{ material.quantidade_atual }} {{ material.unidade_medida }}</td>
+                    <td>{{ material.quantidade_minima }} {{ material.unidade_medida }}</td>
                     <td>
                         {% if material.quantidade_atual <= material.quantidade_minima %}
                         <span class="badge bg-danger">Estoque Baixo</span>

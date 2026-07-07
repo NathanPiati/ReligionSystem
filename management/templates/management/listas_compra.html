@@ -1,0 +1,68 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Listas de Compra</h1>
+        <p class="text-muted mb-0">Histórico das listas geradas, com acesso por ID.</p>
+    </div>
+    <a href="{% url 'estoque' %}" class="btn btn-outline-secondary">Voltar ao estoque</a>
+</div>
+
+{% if messages %}
+<div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} mb-2">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Responsável</th>
+                    <th>Status</th>
+                    <th>Total previsto</th>
+                    <th>Itens</th>
+                    <th>Criada em</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lista in listas_compra %}
+                <tr>
+                    <td>#{{ lista.id }}</td>
+                    <td>{{ lista.responsavel.nome_completo|default:"-" }}</td>
+                    <td>
+                        {% if lista.status == 'GERADA' %}
+                        <span class="badge bg-warning text-dark">{{ lista.get_status_display }}</span>
+                        {% elif lista.status == 'EM_ANDAMENTO' %}
+                        <span class="badge bg-info text-dark">{{ lista.get_status_display }}</span>
+                        {% elif lista.status == 'FINALIZADA' %}
+                        <span class="badge bg-success">{{ lista.get_status_display }}</span>
+                        {% elif lista.status == 'CANCELADA' %}
+                        <span class="badge bg-danger">{{ lista.get_status_display }}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ lista.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>R$ {{ lista.total_previsto }}</td>
+                    <td>{{ lista.itens.count }}</td>
+                    <td>{{ lista.data_criacao|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'detalhe_lista_compra' lista.id %}" class="btn btn-sm btn-outline-primary">Abrir</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">Nenhuma lista de compra foi gerada ainda.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

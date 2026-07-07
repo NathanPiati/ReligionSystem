@@ -1,0 +1,119 @@
+{% extends 'management/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+        <h1 class="h2">Lista de Compra #{{ lista.id }}</h1>
+        <p class="text-muted mb-0">Detalhe e gerenciamento da lista.</p>
+    </div>
+    <a href="{% url 'listas_compra' %}" class="btn btn-outline-secondary">Voltar</a>
+</div>
+
+{% if messages %}
+<div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} mb-2">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Responsável</div>
+                <div class="fw-semibold">{{ lista.responsavel.nome_completo|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Status atual</div>
+                <div class="fw-semibold">
+                    {% if lista.status == 'GERADA' %}
+                    <span class="badge bg-warning text-dark">{{ lista.get_status_display }}</span>
+                    {% elif lista.status == 'EM_ANDAMENTO' %}
+                    <span class="badge bg-info text-dark">{{ lista.get_status_display }}</span>
+                    {% elif lista.status == 'FINALIZADA' %}
+                    <span class="badge bg-success">{{ lista.get_status_display }}</span>
+                    {% elif lista.status == 'CANCELADA' %}
+                    <span class="badge bg-danger">{{ lista.get_status_display }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ lista.get_status_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="text-muted small mb-1">Total previsto</div>
+                <div class="fw-semibold">R$ {{ lista.total_previsto }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <form method="post" class="d-flex flex-wrap gap-2 align-items-end">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="status">
+                <div>
+                    <label for="status" class="form-label mb-1">Atualizar status</label>
+                    <select name="status" id="status" class="form-select">
+                        {% for valor, rotulo in status_choices %}
+                        <option value="{{ valor }}" {% if lista.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar status</button>
+            </form>
+
+            <form method="post" onsubmit="return confirm('Tem certeza que deseja excluir esta lista?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <button type="submit" class="btn btn-outline-danger">Excluir lista</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>ID do item</th>
+                    <th>Material</th>
+                    <th>Categoria</th>
+                    <th>Qtd. atual</th>
+                    <th>Qtd. mínima</th>
+                    <th>Unidade</th>
+                    <th>Valor previsto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in lista.itens.all %}
+                <tr>
+                    <td>#{{ item.id }}</td>
+                    <td>{{ item.material_nome }}</td>
+                    <td>{{ item.categoria|default:"-" }}</td>
+                    <td>{{ item.quantidade_atual }}</td>
+                    <td>{{ item.quantidade_minima }}</td>
+                    <td>{{ item.unidade_medida }}</td>
+                    <td>R$ {{ item.valor_previsto }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">Esta lista não tem itens.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

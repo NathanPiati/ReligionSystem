@@ -1,4 +1,4 @@
-from .models import ActivityLog, Material, MovimentacaoEstoque
+from .models import ActivityLog, Material, MovimentacaoEstoque, ListaCompra, ListaCompraItem
 from django.contrib import admin
 from .models import Medium, Evento, Presenca, Financeiro
 
@@ -40,6 +40,30 @@ class MaterialAdmin(admin.ModelAdmin):
 class MovimentacaoEstoqueAdmin(admin.ModelAdmin):
     list_display = ('material', 'quantidade', 'tipo', 'data')
     list_filter = ('tipo', 'data')
+
+
+class ListaCompraItemInline(admin.TabularInline):
+    model = ListaCompraItem
+    extra = 0
+    readonly_fields = (
+        'material',
+        'material_nome',
+        'categoria',
+        'quantidade_atual',
+        'quantidade_minima',
+        'unidade_medida',
+        'valor_previsto',
+    )
+    can_delete = False
+
+
+@admin.register(ListaCompra)
+class ListaCompraAdmin(admin.ModelAdmin):
+    list_display = ('id', 'responsavel', 'status',
+                    'total_previsto', 'data_criacao')
+    list_filter = ('status', 'data_criacao')
+    search_fields = ('id', 'responsavel__nome_completo')
+    inlines = [ListaCompraItemInline]
 
 
 @admin.register(ActivityLog)
