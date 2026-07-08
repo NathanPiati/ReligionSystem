@@ -28,10 +28,6 @@ from .forms import (
     GroupSelectorForm,
 )
 from io import BytesIO
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 
 User = get_user_model()
@@ -85,6 +81,33 @@ def parse_currency_input(value: str) -> Decimal:
     if parsed < 0:
         raise InvalidOperation
     return parsed
+
+
+def _load_reportlab():
+    # Import tardio para não bloquear comandos de gestão (ex.: migrate/check)
+    # quando as dependências de PDF não estiverem disponíveis no ambiente.
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import (
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+
+    return (
+        A4,
+        landscape,
+        colors,
+        getSampleStyleSheet,
+        SimpleDocTemplate,
+        Paragraph,
+        Spacer,
+        Table,
+        TableStyle,
+    )
 
 
 @require_POST
@@ -328,6 +351,8 @@ def financeiro(request):
 
 @permission_required('management.view_financeiro', raise_exception=True)
 def financeiro_pdf(request):
+    A4, _, colors, getSampleStyleSheet, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle = _load_reportlab()
+
     transacoes = Financeiro.objects.all().order_by('-data')
     total_entradas = Financeiro.objects.filter(tipo='ENTRADA').aggregate(
         total=Sum('valor'))['total'] or 0
@@ -492,6 +517,8 @@ def _salvar_lista_compra(materiais_baixo_estoque, colaborador, request):
 @permission_required('management.view_material', raise_exception=True)
 @require_POST
 def lista_compra_pdf(request):
+    A4, _, colors, getSampleStyleSheet, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle = _load_reportlab()
+
     materiais_baixo_estoque = list(
         Material.objects.filter(quantidade_atual__lte=F(
             'quantidade_minima')).order_by('nome')
@@ -580,6 +607,8 @@ def lista_compra_pdf(request):
 
 @permission_required('management.view_material', raise_exception=True)
 def estoque_pdf(request):
+    A4, _, colors, getSampleStyleSheet, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle = _load_reportlab()
+
     materiais = Material.objects.all().order_by('nome')
     total_items = materiais.count()
     total_quantidade = materiais.aggregate(
@@ -733,6 +762,8 @@ def editar_banho(request, pk):
 
 @permission_required('management.view_banho', raise_exception=True)
 def banhos_pdf(request):
+    A4, landscape, colors, getSampleStyleSheet, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle = _load_reportlab()
+
     banhos = Banho.objects.select_related(
         'medium').order_by('-data', '-horario')
 
@@ -924,6 +955,8 @@ def editar_tarefa(request, pk):
 
 @permission_required('management.view_tarefa', raise_exception=True)
 def tarefas_pdf(request):
+    A4, _, colors, getSampleStyleSheet, SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle = _load_reportlab()
+
     membro_id = request.GET.get('membro')
     status = request.GET.get('status')
     papel = request.GET.get('papel')
